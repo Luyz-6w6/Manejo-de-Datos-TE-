@@ -1,0 +1,136 @@
+---
+title: 'Manejo de Datos: Tarea Examen'
+author:
+- López Labra Luis Enrique
+- López Sánchez Luis Antonio
+- Robles López José Emilio
+- Vallejo Carrillo Maryjose
+date: "2026-10-16"
+output:
+  pdf_document:
+    toc: false
+  bookdown::pdf_document2:
+    number_sections: false
+    toc: false
+    highlight: tango
+geometry: margin=1.0cm
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+#Empezamos limpiando nuestro ambiente
+rm(list = ls(all.names = TRUE))
+# Esto simplemente elimina todo lo del environment 
+
+# Configuración global de los bloques de código (chunk's)
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	fig.dim = c(6.0, 5.0),
+	fig.pos = "H",
+#Agregamos configuraciones para evitar mensajes de advertencias y de errores en el archivo
+	message = FALSE,
+	warning = FALSE,
+	error = F
+)
+
+# Librerías
+# En caso de no tener las librerías, se tendrán que instalar
+
+library(dplyr)      # Para el manejo de datos
+library(ggplot2)    # Para realizar gráficas
+library(kableExtra) # Para un mejor manejo de tablas
+library(knitr)      # Para tablas
+library(readxl)     # Para leer el archivo de excel 
+library(haven)      # Es para quitar los etiquetados
+```
+
+Se nos proporcionaron una serie de bases de datos del *INEGI*, en particular: *Los microdatos de las Personas de la Encuesta Intercensal 2025 en la Ciudad de México*. Nuestro objetivo es responder ciertas preguntas de interés las cuáles iremos detallando conforme vayamos avanzando en el reporte:
+*Nota: Entenderemos como chunk a la sección del archivo Rmd donde se encuentre el código que garantiza la reproducibilidad de los resultados que se irán presentando*
+
+```{r Carga de los datos, include =FALSE}
+# Leemos el archivo de Excel, en particular la hoja de personas
+encuesta_inter <- read_excel("C:/Users/admin/Downloads/eic2025_micro_fd.xlsx",
+                             sheet = "PERSONAS",
+                             skip = 5)
+
+# Datos de personas
+personas <- readRDS("C:/Users/admin/Downloads/personas09.rds")
+
+# Catalogo de personas
+cat <- readRDS("C:/Users/admin/Downloads/catalogo_nom_alcaldias_cdmx.rds")
+head(cat)
+```
+
+
+```{r}
+ejercicio <- personas %>% 
+  #
+  mutate(
+    EDAD_num   = zap_labels(EDAD),
+    SEXO_num   = as.numeric(zap_labels(SEXO)),
+    SITUA_num  = as.numeric(zap_labels(SITUA_CONYUGAL)),
+    FACTOR_num = as.numeric(FACTOR)
+  ) %>% 
+  
+  # 
+  filter(
+    SEXO_num %in% c(1, 3),                  
+    SITUA_num >= 1 & SITUA_num <= 9,         
+    !is.na(SITUA_num),
+    !is.na(FACTOR_num) & FACTOR_num > 0      
+  ) %>% 
+  
+  # 
+  group_by(SEXO_num, SITUA_num) %>% 
+  summarise(
+    suma_factor_cat = sum(FACTOR_num, na.rm = TRUE),
+    .groups = "drop"
+  ) %>% 
+  
+  # 
+  group_by(SEXO_num) %>% 
+  mutate(
+    suma_total_sexo = sum(suma_factor_cat),
+    porcentaje = (suma_factor_cat / suma_total_sexo) * 100
+  ) %>% 
+  ungroup()
+
+# 
+tabla_ejercicio_1 <- ejercicio_1 %>% 
+  mutate(
+    Sexo = if_else(SEXO_num == 1, "Hombre", "Mujer"),
+    Situacion_Conyugal = case_match(
+      SITUA_num,
+      1 ~ "01. Vive con su pareja en unión libre",
+      2 ~ "02. Está separada(o) de una unión libre",
+      3 ~ "03. Está separada(o) de un matrimonio",
+      4 ~ "04. Está divorciada(o)",
+      5 ~ "05. Es viuda(o)",
+      6 ~ "06. Está casada(o) solo por el civil",
+      7 ~ "07. Está casada(o) solo religiosamente",
+      8 ~ "08. Está casada(o) civil y religiosamente",
+      9 ~ "09. Está soltera(o)"
+    ),
+    Poblacion_Expandida = format(round(suma_factor_cat, 0), big.mark = ","),
+    Porcentaje = round(porcentaje, 2)
+  ) %>% 
+  select(Sexo, Situacion_Conyugal, Poblacion_Expandida, Porcentaje)
+
+# 
+tabla_ejercicio_1 %>%
+  kable(
+    format = "latex", 
+    booktabs = TRUE, 
+    align = c("l", "l", "r", "r"),
+    caption = "Porcentaje de la población de la CDMX por situación conyugal según sexo (Encuesta Intercensal 2025)",
+    col.names = c("Sexo", "Situación Conyugal", "Población Expandida", "Porcentaje (%)")
+  ) %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"), 
+    full_width = FALSE
+  )
+```
+```
+
+```
