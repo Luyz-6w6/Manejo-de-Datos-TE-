@@ -34,6 +34,7 @@ knitr::opts_chunk$set(
 	error = F
 )
 
+
 # Librerías
 # En caso de no tener las librerías, se tendrán que instalar
 
@@ -42,10 +43,14 @@ library(ggplot2)    # Para realizar gráficas
 library(kableExtra) # Para un mejor manejo de tablas
 library(knitr)      # Para tablas
 library(readxl)     # Para leer el archivo de excel 
-library(haven)      # Es para quitar los etiquetados
+# Comentario para el lector:
+# Considere que las rutas son relativas para la computadora en donde se realizó 
+# Este código, por lo que para garantizar los resultados se deberán de cambiar la dirección 
+# del archivo manteniendo los mismos nombres
 ```
 
-Se nos proporcionaron una serie de bases de datos del *INEGI*, en particular: *Los microdatos de las Personas de la Encuesta Intercensal 2025 en la Ciudad de México*. Nuestro objetivo es responder ciertas preguntas de interés las cuáles iremos detallando conforme vayamos avanzando en el reporte:
+Se nos proporcionaron una serie de bases de datos del *INEGI*, en particular: *Los microdatos de las Personas de la Encuesta Intercensal 2025 en la Ciudad de México*. Nuestro objetivo es responder ciertas preguntas de interés las cuáles iremos detallando conforme vayamos avanzando en el reporte:  
+
 *Nota: Entenderemos como chunk a la sección del archivo Rmd donde se encuentre el código que garantiza la reproducibilidad de los resultados que se irán presentando*
 
 ```{r Carga de los datos, include =FALSE}
@@ -63,44 +68,47 @@ head(cat)
 ```
 
 
-```{r}
-ejercicio <- personas %>% 
-  #
+```{r Primer Ejercicio, include=FALSE}
+ejercicio <- personas %>% # Con el str sabemos que son variables de tipo entera
   mutate(
-    EDAD_num   = zap_labels(EDAD),
-    SEXO_num   = as.numeric(zap_labels(SEXO)),
-    SITUA_num  = as.numeric(zap_labels(SITUA_CONYUGAL)),
+    EDAD_num   = as.numeric(EDAD), # Pero conviene hacerlas a tipo numérica
+    SEXO_num   = as.numeric(SEXO),
+    SITUA_num  = as.numeric(SITUA_CONYUGAL),
     FACTOR_num = as.numeric(FACTOR)
   ) %>% 
   
-  # 
+  # Filtros
   filter(
-    SEXO_num %in% c(1, 3),                  
-    SITUA_num >= 1 & SITUA_num <= 9,         
-    !is.na(SITUA_num),
-    !is.na(FACTOR_num) & FACTOR_num > 0      
+    SEXO_num %in% c(1, 3),        # Seleccionamos los sexos: Hombre 1 y Mujer 3         
+    SITUA_num >= 1 & SITUA_num <= 9, # Seleccionamos los registros del 1 al 9  
+    !is.na(SITUA_num),               # Y quitamos los demás registros
+    !is.na(FACTOR_num) & FACTOR_num > 0     # Lo mismo, nos agarramos los 
+    #positivos y quitamos los NA de FACTOR
   ) %>% 
   
-  # 
-  group_by(SEXO_num, SITUA_num) %>% 
-  summarise(
+  # Agrupamos para la suma ponderada
+  group_by(SEXO_num, SITUA_num) %>% # Agrupamos por sexo y situación conyugal
+  summarise( # Sumamos los factores de expansión diciendole que omita los NA
     suma_factor_cat = sum(FACTOR_num, na.rm = TRUE),
-    .groups = "drop"
+    .groups = "drop" # Al final desagrupamos para evitar errores
   ) %>% 
   
-  # 
-  group_by(SEXO_num) %>% 
+  # Cálculo de porcentajes por sexo
+  group_by(SEXO_num) %>% # Agrupamos por sexo
   mutate(
-    suma_total_sexo = sum(suma_factor_cat),
-    porcentaje = (suma_factor_cat / suma_total_sexo) * 100
+    suma_total_sexo = sum(suma_factor_cat), # Con esto obtenemos el denominador
+    porcentaje = (suma_factor_cat / suma_total_sexo) * 100 # Y calculamos los porcentajes
   ) %>% 
   ungroup()
+```
 
-# 
-tabla_ejercicio_1 <- ejercicio_1 %>% 
+```{r Tabla Ejercicio 1}
+# Presentamos la tabla que se solicita en el ejercicio 1
+tabla_ejercicio_1 <- ejercicio %>% 
   mutate(
     Sexo = if_else(SEXO_num == 1, "Hombre", "Mujer"),
     Situacion_Conyugal = case_match(
+      # case_match va a emparejar los sexos con su situación conyugal
       SITUA_num,
       1 ~ "01. Vive con su pareja en unión libre",
       2 ~ "02. Está separada(o) de una unión libre",
@@ -112,18 +120,18 @@ tabla_ejercicio_1 <- ejercicio_1 %>%
       8 ~ "08. Está casada(o) civil y religiosamente",
       9 ~ "09. Está soltera(o)"
     ),
-    Poblacion_Expandida = format(round(suma_factor_cat, 0), big.mark = ","),
-    Porcentaje = round(porcentaje, 2)
+    Poblacion_Expandida = format(round(suma_factor_cat, 0), big.mark = ","), # Le damos formato a los números
+    Porcentaje = round(porcentaje, 2) # Redondeamos a 2 decimales
   ) %>% 
-  select(Sexo, Situacion_Conyugal, Poblacion_Expandida, Porcentaje)
+  select(Sexo, Situacion_Conyugal, Poblacion_Expandida, Porcentaje) # Columnas
 
-# 
+# Mostramos la tabla con kable 
 tabla_ejercicio_1 %>%
   kable(
     format = "latex", 
     booktabs = TRUE, 
-    align = c("l", "l", "r", "r"),
-    caption = "Porcentaje de la población de la CDMX por situación conyugal según sexo (Encuesta Intercensal 2025)",
+    align = c("l", "l", "r", "r"), # Esto solo le dice a R donde poner los datos
+    caption = "Porcentaje de la población de la CDMX por situación conyugal según su sexo",
     col.names = c("Sexo", "Situación Conyugal", "Población Expandida", "Porcentaje (%)")
   ) %>%
   kable_styling(
@@ -131,6 +139,378 @@ tabla_ejercicio_1 %>%
     full_width = FALSE
   )
 ```
+
+```{r Ejercicio 2}
+# Cálculo de la edad media ponderada para personas solteras (e_m_p)
+e_m_p <- personas %>% 
+  # Replicamos lo del ejercicio anterior
+  mutate(
+    EDAD_num   = as.numeric(EDAD),
+    SEXO_num   = as.numeric(SEXO),
+    SITUA_num  = as.numeric(SITUA_CONYUGAL),
+    FACTOR_num = as.numeric(FACTOR)
+  ) %>% 
+  
+  # Filtramos como se nos indica
+  filter(
+    SEXO_num %in% c(1, 3),                   
+    SITUA_num == 9,                          #  Solo solteros
+    !is.na(EDAD_num) & EDAD_num <= 130,       # Edad conocida 
+    !is.na(FACTOR_num) & FACTOR_num > 0      # FACTOR positivo y sin NA
+  ) %>% 
+  
+  #  Agrupamos por sexo
+  group_by(SEXO_num) %>% 
+  
+  # Calculamos la edad media ponderada
+  summarise(
+    e_m_p = weighted.mean(EDAD_num, w = FACTOR_num, na.rm = TRUE),
+    .groups = "drop"
+  ) %>% 
+  
+  # Agregamos el primer formato para la tabla
+  mutate(
+    Sexo = if_else(SEXO_num == 1, "Hombre", "Mujer"),
+    "Edad media en años" = round(e_m_p, 1)
+  ) %>% 
+  select(Sexo, `Edad media en años`)
+
+# Finalmente le damos el formato de tabla
+e_m_p %>%
+  kable(
+    format = "latex", 
+    booktabs = TRUE, 
+    align = c("l", "r"),
+    caption = "Edad media ponderada de la población soltera en la CDMX por sexo",
+    col.names = c("Sexo", "Edad media en años)")
+  ) %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"), 
+    full_width = FALSE
+  )
 ```
+
+```{r Ejercicio 3}
+# Hacemos lo mismo que en los dos ejercicios pasados
+a_edu <- personas %>% 
+  # Transformamos los datos a numéricos
+  mutate(
+    EDAD_num    = as.numeric(EDAD),
+    SEXO_num    = as.numeric(SEXO),
+    NIVACAD_num = as.numeric(NIVACAD),
+    FACTOR_num  = as.numeric(FACTOR)
+  ) %>% 
+  
+  # Filtramos por edad, los sexos y eliminamos los NA y los valores en blanco
+  filter(
+    EDAD_num >= 25,
+    SEXO_num %in% c(1, 3),
+    !is.na(NIVACAD_num) & NIVACAD_num != 99,
+    !is.na(FACTOR_num) & FACTOR_num > 0
+  ) %>% 
+  
+  # Agrupamos por sexo y nivel educativo 
+  group_by(SEXO_num, NIVACAD_num) %>% 
+  summarise(
+    poblacion_nivel = sum(FACTOR_num, na.rm = TRUE),
+    .groups = "drop"
+  ) %>% 
+  
+  # Calculamos el denominador y el porcentaje
+  group_by(SEXO_num) %>% 
+  mutate(
+    poblacion_total_sexo = sum(poblacion_nivel),
+    porcentaje = (poblacion_nivel / poblacion_total_sexo) * 100
+  ) %>% 
+  ungroup() %>% 
+  
+  # Finalmente extraemos los elementos solicitados
+  filter(NIVACAD_num %in% c(2, 11)) %>% 
+  
+  # Le damos formato a la tabla
+  mutate(
+    Sexo = if_else(SEXO_num == 1, "Hombres", "Mujeres"),
+    Nivel = if_else(NIVACAD_num == 2, "Primaria (%)", "Licenciatura (%)"),
+    Porcentaje = round(porcentaje, 2)
+  )
+
+tabla_comp <- a_edu %>% 
+  select(Sexo, Nivel, Porcentaje) %>% 
+  tidyr::pivot_wider( # Pasamos de formato largo al ancho
+    names_from = Nivel, 
+    values_from = Porcentaje
+  )
+
+# Tabla con Kable
+tabla_comp %>%
+  kable(
+    format = "latex", 
+    booktabs = TRUE, 
+    align = c("l", "r", "r"),
+    caption = "Porcentaje de la población de 25 años o más en la CDMX que cuenta con Primaria o Licenciatura como máximo nivel educativo por sexo",
+    col.names = c("Sexo", "Primaria (%)", "Licenciatura (%)")
+  ) %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"), 
+    full_width = FALSE
+  )
+```
+
+```{r Ejercicio 4}
+# Repetimos lo mismo 
+pea <- personas %>% 
+  mutate(
+    EDAD_num   = as.numeric(EDAD),
+    SEXO_num   = as.numeric(SEXO),
+    CONACT_num = as.numeric(CONACT),
+    FACTOR_num = as.numeric(FACTOR)
+  ) %>% 
+  
+  # Filtramos según los requerimientos
+  filter(
+    CONACT_num %in% c(10, 13, 14, 15, 16, 17, 18, 19, 20, 30),
+    EDAD_num >= 15 & EDAD_num < 120,
+    SEXO_num %in% c(1, 3),
+    !is.na(FACTOR_num) & FACTOR_num > 0
+  ) %>% 
+  
+  # Y creamos manualmente los grupos de edad
+  mutate(
+    Grupo_Edad = case_when(
+      EDAD_num >= 15 & EDAD_num <= 24 ~ "15–24 años",
+      EDAD_num >= 25 & EDAD_num <= 34 ~ "25–34 años",
+      EDAD_num >= 35 & EDAD_num <= 44 ~ "35–44 años",
+      EDAD_num >= 45 & EDAD_num <= 54 ~ "45–54 años",
+      EDAD_num >= 55 & EDAD_num <= 64 ~ "55–64 años",
+      EDAD_num >= 65                 ~ "65 años o más"
+    )
+  ) %>% 
+  
+  # Agrupamos y sumamos 
+  group_by(SEXO_num, Grupo_Edad) %>% 
+  summarise(poblacion_grupo = sum(FACTOR_num, na.rm = TRUE), .groups = "drop") %>% 
+  
+  # Cálculo del denominador del pea por sexo y su porcentaje
+  group_by(SEXO_num) %>% 
+  mutate(
+    poblacion_total_pea = sum(poblacion_grupo),
+    Porcentaje = round((poblacion_grupo / poblacion_total_pea) * 100, 2), # Lo dejamos a 2 decimales
+    Sexo = if_else(SEXO_num == 1, "Hombres", "Mujeres")
+  ) %>% 
+  ungroup()
+
+# Cambiamos el formato
+tabla_pea <- pea %>% 
+  select(Sexo, Grupo_Edad, Porcentaje) %>% 
+  tidyr::pivot_wider(names_from = Sexo, values_from = Porcentaje)
+
+# Ajustamos la tabla
+tabla_pea %>%
+  kable(
+    format = "latex", 
+    booktabs = TRUE, 
+    align = c("l", "r", "r"),
+    caption = "Distribución porcentual de la Población Económicamente Activa en la CDMX por grupos de edad según sexo",
+    col.names = c("Grupo de Edad", "Hombres (%)", "Mujeres (%)")
+  ) %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"), 
+    full_width = FALSE
+  )
+```
+
+```{r Ejer4 imagen}
+
+grafica_pea <- ggplot(pea, aes(x = Grupo_Edad, y = Porcentaje, fill = Sexo)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  geom_text(
+    aes(label = paste0(Porcentaje, "%")), 
+    position = position_dodge(width = 0.8), 
+    vjust = -0.5, 
+    size = 3
+  ) +
+  scale_fill_manual(values = c("Hombres" = "#2c7bb6", "Mujeres" = "#d7191c")) +
+  labs(
+    title = "Estructura por Edad de la Población Económicamente Activa (PEA)",
+    subtitle = "Ciudad de México (Encuesta Intercensal 2025)",
+    x = "Grupos de Edad",
+    y = "Porcentaje (%)",
+    fill = "Sexo"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5),
+    panel.grid.minor = element_blank(),
+    legend.position = "bottom"
+  ) +
+  ylim(0, max(pea$Porcentaje) + 5) # Margen superior para las etiquetas de texto
+
+# Desplegar gráfica
+print(grafica_pea)
+
+```
+
+```{r Ejercicio 5}
+# Hacemos el mismo procedimiento
+ocupados_educacion <- personas %>% 
+  mutate(
+    EDAD_num        = as.numeric(EDAD),
+    CONACT_num      = as.numeric(CONACT),
+    NIVACAD_num     = as.numeric(NIVACAD),
+    FACTOR_num      = as.numeric(FACTOR),
+    # Mantenemos Ocupacion_C en caracter
+    OCUPACION_C_str = as.character(OCUPACION_C)
+  ) %>% 
+  
+  # Filtramos según lo solcitado
+  filter(
+    EDAD_num >= 25, # Mayores de 25
+    CONACT_num %in% c(10, 13, 14, 15, 16, 17, 18, 19, 20), # Solo los seleccionados
+    OCUPACION_C_str != "999", # Quitamos los no especificados
+    NIVACAD_num != 99,
+    # Removemos los NA
+    !is.na(EDAD_num) & !is.na(CONACT_num) & !is.na(NIVACAD_num) & !is.na(OCUPACION_C_str),
+    !is.na(FACTOR_num) & FACTOR_num > 0
+  )
+
+# Construimos las tablas
+tabla_proporciones <- ocupados_educacion %>% 
+  group_by(OCUPACION_C_str, NIVACAD_num) %>% 
+  summarise(
+    factor_combinacion = sum(FACTOR_num, na.rm = TRUE),
+    registros_validos   = n(), # Cuenta de registros físicos en la muestra
+    .groups = "drop"
+  ) %>% 
+  
+  # Definimos el denominador
+  group_by(OCUPACION_C_str) %>% 
+  mutate(
+    factor_total_ocupacion = sum(factor_combinacion),
+    # Calculamos el porcentaje
+    total_registros_clave  = sum(registros_validos), 
+    porcentaje_ponderado   = (factor_combinacion / factor_total_ocupacion) * 100
+  ) %>% 
+  ungroup()
+
+# mantenemos los pirmeros 3
+top_3_ocupaciones <- tabla_proporciones %>% 
+  # Filtramos según lo pedido
+  filter(NIVACAD_num %in% c(11, 12, 13, 14)) %>% 
+  
+  # Sumar los porcentajes ponderados de este bloque educativo para cada clave única
+  group_by(OCUPACION_C_str, total_registros_clave) %>% 
+  summarise(
+    Porcentaje_Conjunto = sum(porcentaje_ponderado),
+    .groups = "drop"
+  ) %>% 
+  
+  # Creamos el filtro de desempate
+  arrange(desc(Porcentaje_Conjunto), OCUPACION_C_str) %>% 
+  
+  # Seleccionar las tres primeras claves resultantes
+  head(3)
+
+#  FGeneramos la tabla
+top_3_ocupaciones %>% 
+  mutate(
+    Porcentaje_Conjunto = round(Porcentaje_Conjunto, 2),
+    total_registros_clave = format(total_registros_clave, big.mark = ",")
+  ) %>% 
+  kable(
+    format = "latex", 
+    booktabs = TRUE, 
+    align = c("c", "r", "r"),
+    # Se añade la doble barra invertida al guion bajo
+    caption = "Top 3 de claves de ocupación (OCUPACION\\_C) con mayor porcentaje conjunto de educación superior (Licenciatura y Posgrado) en la CDMX",
+    col.names = c("Clave de Ocupación", "Registros Muestrales Válidos", "Licenciatura y Posgrado (%)")
+  ) %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"), 
+    full_width = FALSE
+  )
+```
+
+
+
+```{r Ejercicio 6}
+# Trabajamos el catalogo
+cat_limpio <- cat %>%
+  mutate(CVE_MUN_num = as.numeric(cve_mun)) %>% 
+  select(CVE_MUN_num, nom_alcaldia)                             
+
+# Hacemos la misma conversión de variables
+migracion_alcaldias <- personas %>%
+  mutate(
+    CVE_MUN_num      = as.numeric(CVE_MUN), 
+    ENT_PAIS_NAC_num = as.numeric(ENT_PAIS_NAC),
+    FACTOR_num       = as.numeric(FACTOR)
+  ) %>%
+  
+  # Filtramos por entidad
+  filter(
+    ENT_PAIS_NAC_num >= 1 & ENT_PAIS_NAC_num <= 32,
+    !is.na(CVE_MUN_num),
+    !is.na(FACTOR_num) & FACTOR_num > 0
+  ) %>%
+  
+  # Vemos los nacidos fuera de la CdMx
+  mutate(Nacio_Otra_Entidad = if_else(ENT_PAIS_NAC_num != 9, FACTOR_num, 0)) %>%
+  
+  # Agrupamos por alcaldía
+  group_by(CVE_MUN_num) %>%
+  summarise(
+    Numerador_Otra_Entidad = sum(Nacio_Otra_Entidad, na.rm = TRUE),
+    Denominador_Total_Mex  = sum(FACTOR_num, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  
+  # Calculamos el porcentaje de población nacida fuera de la CDMX
+  mutate(Porcentaje_Foraneo = round((Numerador_Otra_Entidad / Denominador_Total_Mex) * 100, 2)) %>%
+  
+  # Unimos mediante left join por la clave homologada
+  left_join(cat_limpio, by = "CVE_MUN_num") %>%
+  
+  # Ordenamos de mayor a menor
+  arrange(desc(Porcentaje_Foraneo))
+
+# Le damos formato a la tabla
+migracion_alcaldias %>%
+  select(nom_alcaldia, Porcentaje_Foraneo) %>%
+  kable(
+    format = "latex", 
+    booktabs = TRUE, 
+    align = c("l", "r"),
+    caption = "Porcentaje de residentes nacidos en una entidad federativa distinta a la CDMX por alcaldía (Encuesta Intercensal)",
+    col.names = c("Alcaldía", "Nacidos fuera de la CDMX (%)")
+  ) %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"), 
+    full_width = FALSE
+  )
+```
+
+```{r Grafica del EJ6}
+# 
+grafica_migracion <- ggplot(migracion_alcaldias, aes(x = reorder(nom_alcaldia, Porcentaje_Foraneo), y = Porcentaje_Foraneo)) +
+  geom_col(fill = "#3182bd", width = 0.7) +
+  geom_text(aes(label = paste0(Porcentaje_Foraneo, "%")), hjust = -0.1, size = 3) +
+  coord_flip() + 
+  labs(
+    title = "Población Residente Nacida Fuera de la Ciudad de México",
+    subtitle = "Distribución porcentual por alcaldía",
+    x = "Alcaldía",
+    y = "Porcentaje (%)"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5),
+    panel.grid.minor = element_blank()
+  ) +
+  ylim(0, max(migracion_alcaldias$Porcentaje_Foraneo) + 5)
+
+# Desplegar gráfica
+print(grafica_migracion)
 
 ```
