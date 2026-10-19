@@ -55,15 +55,15 @@ Se nos proporcionaron una serie de bases de datos del *INEGI*, en particular: *L
 
 ```{r Carga de los datos, include =FALSE}
 # Leemos el archivo de Excel, en particular la hoja de personas
-encuesta_inter <- read_excel("C:/Users/admin/Downloads/eic2025_micro_fd.xlsx",
+encuesta_inter <- read_excel("C:/Users/Luis/Downloads/eic2025_micro_fd.xlsx",
                              sheet = "PERSONAS",
                              skip = 5)
 
 # Datos de personas
-personas <- readRDS("C:/Users/admin/Downloads/personas09.rds")
+personas <- readRDS("C:/Users/Luis/Downloads/personas09.rds")
 
 # Catalogo de personas
-cat <- readRDS("C:/Users/admin/Downloads/catalogo_nom_alcaldias_cdmx.rds")
+cat <- readRDS("C:/Users/Luis/Downloads/catalogo_nom_alcaldias_cdmx.rds")
 head(cat)
 ```
 
@@ -102,7 +102,7 @@ ejercicio <- personas %>% # Con el str sabemos que son variables de tipo entera
   ungroup()
 ```
 
-```{r Tabla Ejercicio 1}
+```{r Tabla_Ejercicio_1}
 # Presentamos la tabla que se solicita en el ejercicio 1
 tabla_ejercicio_1 <- ejercicio %>% 
   mutate(
@@ -140,7 +140,16 @@ tabla_ejercicio_1 %>%
   )
 ```
 
-```{r Ejercicio 2}
+En la \@ref(tab:Tabla_Ejercicio_1) se observan diferencias significativas, considerando que en ese año la población de la Ciudad de México rondaba los 9.2 millones de personas, entre ambos sexos en la mayoría de categorías de situación conyugal. Siendo la menor diferencia del 0.15% en casada(o) solo religiosamente.
+
+La categoría más frecuente es la de soltera(o) que en ambos sexos concentra alrededor del 40% lo cual tiene sentido ya que se consideraron todas las edades y concuerda con la tendencia actual de priorizar otros aspectos sobre el conyugal.
+La siguiente categoría con mayor frecuencia es la de en union libre, pero agrupando todas las modalidades de matrimonio se obtiene que para ambos sexos un porcentaje por encima del 20%, mayor al de union libre en abos casos,  lo que refleja el impacto que aún tiene el matrimonio como institución.
+
+La mayor de las brechas se encuentra en la viudez, siendo de 6.64%, con mayor frecuencia en las mujeres que podría explicarse con la mayor esperanza de vida para este sexo; la tendencia de la diferencia de edad en las parejas donde, en caso de ser pareja hombre-mujer, el hombre suele ser mayor y la mayor mortalidad en hombres.
+
+Tanto en las categorías de separación como de divorcio predominan las mujeres, que concuerda al ver que en las categorías de matrimonio y union libre predominan hombres.
+
+```{r Tabla_Ejercicio_2}
 # Cálculo de la edad media ponderada para personas solteras (e_m_p)
 e_m_p <- personas %>% 
   # Replicamos lo del ejercicio anterior
@@ -190,7 +199,11 @@ e_m_p %>%
   )
 ```
 
-```{r Ejercicio 3}
+De la \@ref(tab:Tabla_Ejercicio_2) se tiene que la edad promedio ponderada de los hombres solteros es de 35.4 años, mientras que la de las mujeres solteras es de 34.2 años. La diferencia entre ambas medias es de 1.2 años, lo que indica que los hombres que se declaran solteros presentan una edad promedio mayor que las mujeres solteras.
+
+Este resultado describe la edad actual de las personas solteras incluidas en el análisis. Sin embargo, no representa la edad promedio a la que hombres y mujeres contraen matrimonio, ya que las personas solteras pueden no haberse casado nunca. Por lo tanto, la comparación permite identificar una diferencia en las edades promedio de ambos grupos, pero no establecer a qué edad suelen casarse.
+
+```{r Tabla_Ejercicio_3}
 # Hacemos lo mismo que en los dos ejercicios pasados
 a_edu <- personas %>% 
   # Transformamos los datos a numéricos
@@ -256,7 +269,10 @@ tabla_comp %>%
   )
 ```
 
-```{r Ejercicio 4}
+En la \@ref(tab:Tabla_Ejercicio_3) hay una diferencia significativa, de 3.9%, a favor de los hombres en personas mayores de 25 años cuya escolaridad máxima es la licenciatura, debida probablemente a la brecha histórica en el acceso a la educación superior que pone en desventaja a las mujeres. Es igualmente notorio que para ambos sexos el porcentaje de escolaridad a nivel licenciatura ronda el 30% lo cual es reflejo de la accesibilidad de la educación superior en la Ciudad de México.
+Acorde con las dificultades que históricamente han tenido las mujeres para el acceso a la educación hay un porcentaje mayor de mujeres con primaria como máxima escolaridad y probablemente sea en patrón que se repite en el resto de las categorías de educación básica.
+
+```{r Tabla_Ejercicio_4}
 # Repetimos lo mismo 
 pea <- personas %>% 
   mutate(
@@ -319,7 +335,7 @@ tabla_pea %>%
   )
 ```
 
-```{r Ejer4 imagen}
+```{r Ejer4_imagen}
 
 grafica_pea <- ggplot(pea, aes(x = Grupo_Edad, y = Porcentaje, fill = Sexo)) +
   geom_col(position = position_dodge(width = 0.8), width = 0.7) +
@@ -351,7 +367,9 @@ print(grafica_pea)
 
 ```
 
-```{r Ejercicio 5}
+La distribución porcentual de la Población Económicamente Activa (PEA) de la \@ref(tab:Tabla_Ejercicio_4) y la \@ref(fig:Ejer4_imagen) muestra que el grupo de 25 a 34 años concentra la mayor proporción tanto de hombres (25.12%) como de mujeres (25.86%). En el grupo de 35 a 44 años, las mujeres representan el 24.66% y los hombres el 23.52%; una diferencia similar también a la del grupo de 45 a 54 años, donde las mujeres alcanzan el 22.24% y los hombres el 21.09%. Pero los hombres presentan porcentajes mayores en los grupos de 15 a 24 años, de 55 a 64 años y de 65 años o más. En general, la PEA de ambos sexos se concentra principalmente entre los 25 y 54 años. Es importante señalar que estos porcentajes describen la composición por edades de la PEA de cada sexo, no la proporción de personas económicamente activas dentro de toda la población.
+
+```{r Tabla_Ejercicio_5}
 # Hacemos el mismo procedimiento
 ocupados_educacion <- personas %>% 
   mutate(
@@ -431,9 +449,11 @@ top_3_ocupaciones %>%
   )
 ```
 
+La \@ref(tab:Tabla_Ejercicio_5) muestraa que las tres claves de ocupación con mayor porcentaje conjunto de personas con licenciatura y posgrado son la 221, con 98.92%, la 211, con 97.89%, y la 226, con 97.80%. Esto indica que, en las tres ocupaciones seleccionadas, la gran mayoría de los registros ponderados corresponde a personas con licenciatura o estudios de posgrado.
 
+En cuanto a los registros muestrales válidos, la clave 221 cuenta con 129, la clave 211 con 2,161 y la clave 226 con 1,120. Por lo tanto, aunque la clave 221 tiene la mayor proporción de personas con licenciatura y posgrado, también consideremos que cuenta con menos registros válidos que las otras dos ocupaciones. Estos resultados permiten comparar el nivel educativo de las ocupaciones seleccionadas, aunque no implican que tener estudios superiores sea necesariamente la causa de pertenecer a una ocupación determinada.
 
-```{r Ejercicio 6}
+```{r Tabla_Ejercicio_6}
 # Trabajamos el catalogo
 cat_limpio <- cat %>%
   mutate(CVE_MUN_num = as.numeric(cve_mun)) %>% 
@@ -490,7 +510,7 @@ migracion_alcaldias %>%
   )
 ```
 
-```{r Grafica del EJ6}
+```{r Grafica_EJ6}
 # 
 grafica_migracion <- ggplot(migracion_alcaldias, aes(x = reorder(nom_alcaldia, Porcentaje_Foraneo), y = Porcentaje_Foraneo)) +
   geom_col(fill = "#3182bd", width = 0.7) +
@@ -514,3 +534,7 @@ grafica_migracion <- ggplot(migracion_alcaldias, aes(x = reorder(nom_alcaldia, P
 print(grafica_migracion)
 
 ```
+
+Las diferencias mostradas en la \@ref(tab:Tabla_Ejercicio_6), y más claramente en \@ref(fig:Grafica_EJ6),  entre alcaldías permiten identificar en cuáles existe una mayor proporción de residentes nacidos fuera de la Ciudad de México. Un porcentaje elevado indica que una parte importante de la población residente de esa alcaldía nació en otra entidad federativa. Esto puede relacionarse con la historia migratoria de la población y con la movilidad entre entidades del país.
+
+Sin embargo, haber nacido en otra entidad no significa necesariamente haber migrado recientemente. Una persona pudo haber llegado a la Ciudad de México hace muchos años y continuar residiendo ahí, por lo que el lugar de nacimiento no permite determinar cuándo ocurrió la migración. Además, el indicador no incluye a quienes nacieron en otro país, ya que el cálculo considera únicamente entidades federativas mexicanas con códigos válidos.
